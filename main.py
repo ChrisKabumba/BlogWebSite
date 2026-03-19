@@ -2,7 +2,6 @@ from datetime import date
 from flask import Flask, abort, render_template, redirect, url_for, flash, request
 from flask_bootstrap import Bootstrap5
 from flask_ckeditor import CKEditor
-from flask_gravatar import Gravatar
 from flask_login import UserMixin, login_user, LoginManager, current_user, logout_user, login_required
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
@@ -10,6 +9,8 @@ from sqlalchemy import Integer, String, Text
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
+from urllib.parse import urlencode
+import hashlib
 import smtplib
 from dotenv import load_dotenv
 import os
@@ -29,17 +30,6 @@ login_manager.init_app(app)
 @login_manager.user_loader
 def load_user(user_id):
     return db.get_or_404(User, user_id)
-
-
-# For adding profile images to the comment section
-gravatar = Gravatar(app,
-                    size=100,
-                    rating='g',
-                    default='retro',
-                    force_default=False,
-                    force_lower=False,
-                    use_ssl=False,
-                    base_url=None)
 
 # CREATE DATABASE
 class Base(DeclarativeBase):
@@ -72,6 +62,12 @@ class User(UserMixin, db.Model):
     name: Mapped[str] = mapped_column(String(100))
     posts = relationship("BlogPost", back_populates="author")
     comments = relationship("Comment", back_populates="comment_author")
+
+    def avatar(self, size):
+        email_encoded = self.email.lower().encode('utf-8')
+        email_hash = hashlib.md5(email_encoded).hexdigest()
+        params = urlencode({"d": "identicon", "s": str(size)})
+        return f"https://www.gravatar.com/avatar/{email_hash}?{params}"
 
 
 # Create a table for the comments on the blog posts
