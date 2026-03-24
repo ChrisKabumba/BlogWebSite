@@ -132,8 +132,8 @@ def register():
 
 @app.route('/login', methods=["GET", "POST"])
 def login():
-    form = LoginForm()
     next = request.args.get('next')
+    form = LoginForm()
     if form.validate_on_submit():
         password = form.password.data
         result = db.session.execute(db.select(User).where(User.email == form.email.data))
@@ -257,8 +257,8 @@ MAIL_APP_PW = os.environ.get("PASSWORD_KEY")
 def contact():
     if request.method == "POST":
         data = request.form
-        send_email(data["name"], data["email"], data["phone"], data["message"])
-        return render_template("contact.html", msg_sent=True)
+        status = send_email(data["name"], data["email"], data["phone"], data["message"])
+        return render_template("contact.html", msg_sent=status)
     return render_template("contact.html", msg_sent=False)
 
 
@@ -268,7 +268,12 @@ def send_email(name, email, phone, message):
     with smtplib.SMTP("smtp.gmail.com") as connection:
         connection.starttls()
         connection.login(MAIL_ADDRESS, MAIL_APP_PW)
-        connection.sendmail(MAIL_ADDRESS, MAIL_ADDRESS, email_message)
+        try:
+            connection.sendmail(MAIL_ADDRESS, MAIL_ADDRESS, email_message)
+            return True
+        except Exception as e:
+            print(f"Exception: {e}")
+            return False
 
 
 if __name__ == "__main__":
