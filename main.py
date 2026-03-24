@@ -133,6 +133,7 @@ def register():
 @app.route('/login', methods=["GET", "POST"])
 def login():
     form = LoginForm()
+    next = request.args.get('next')
     if form.validate_on_submit():
         password = form.password.data
         result = db.session.execute(db.select(User).where(User.email == form.email.data))
@@ -148,7 +149,7 @@ def login():
             return redirect(url_for('login'))
         else:
             login_user(user)
-            return redirect(url_for('get_all_posts'))
+            return redirect(next or url_for('get_all_posts'))
 
     return render_template("login.html", form=form, current_user=current_user)
 
@@ -173,11 +174,12 @@ def show_post(post_id):
     requested_post = db.get_or_404(BlogPost, post_id)
     # Add the CommentForm to the route
     comment_form = CommentForm()
+
     # Only allow logged-in users to comment on posts
     if comment_form.validate_on_submit():
         if not current_user.is_authenticated:
             flash("You need to login or register to comment.")
-            return redirect(url_for("login"))
+            return redirect(url_for("login", next=url_for('show_post', post_id=post_id)))
 
         new_comment = Comment(
             text=comment_form.comment_text.data,
@@ -186,6 +188,7 @@ def show_post(post_id):
         )
         db.session.add(new_comment)
         db.session.commit()
+        
     return render_template("post.html", post=requested_post, current_user=current_user, form=comment_form)
 
 
@@ -269,4 +272,4 @@ def send_email(name, email, phone, message):
 
 
 if __name__ == "__main__":
-    app.run(debug=False, port=5001)
+    app.run(debug=True, port=5001)
